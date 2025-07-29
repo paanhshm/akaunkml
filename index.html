@@ -200,11 +200,8 @@
             if (sessionData) {
                 try {
                     const session = JSON.parse(decodeURIComponent(sessionData));
-                    // Auto-open student modal and show check-in form
-                    openStudentModal();
-                    setTimeout(() => {
-                        showCheckInForm(session);
-                    }, 500);
+                    // Show student-only interface
+                    showStudentOnlyInterface(session);
                     return;
                 } catch (error) {
                     console.error('Error parsing session data:', error);
@@ -451,6 +448,64 @@
             }
         }
 
+        function showStudentOnlyInterface(session) {
+            // Hide all lecturer interface elements
+            document.querySelector('.container').innerHTML = `
+                <div class="max-w-md mx-auto">
+                    <!-- Student Check-in Header -->
+                    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                        <div class="text-center">
+                            <h1 class="text-2xl font-bold text-gray-800 mb-2">📚 Student Check-in</h1>
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <p class="text-green-800 font-medium">Session Found!</p>
+                                <p class="text-green-700 text-sm">Class: ${session.class} | ${session.date} at ${session.time}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Check-in Form -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                                <input type="text" id="studentName" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your full name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
+                                <input type="text" id="studentId" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your student ID">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Select Your Class</label>
+                                <select id="studentClass" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Choose your class...</option>
+                                    <option value="A05">A05</option>
+                                    <option value="A06">A06</option>
+                                    <option value="A07">A07</option>
+                                    <option value="A08">A08</option>
+                                </select>
+                            </div>
+                            <button onclick="submitAttendance()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                                ✅ Check In
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Success Message (hidden initially) -->
+                    <div id="successMessage" class="hidden bg-green-50 border border-green-200 rounded-lg p-6 mt-6">
+                        <div class="text-center">
+                            <div class="text-green-600 text-4xl mb-2">✅</div>
+                            <h2 class="text-xl font-bold text-green-800 mb-2">Check-in Successful!</h2>
+                            <p class="text-green-700">Your attendance has been recorded.</p>
+                            <p class="text-green-600 text-sm mt-2">You can now close this page.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Store current session for form submission
+            window.currentCheckInSession = session;
+        }
+
         function showCheckInForm(session) {
             // Show check-in form directly with session data
             document.getElementById('scannerSection').classList.add('hidden');
@@ -554,8 +609,18 @@
                 localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
             }
 
-            alert('✅ Attendance recorded successfully!');
-            closeStudentModal();
+            // Check if we're in student-only mode or modal mode
+            const successMessage = document.getElementById('successMessage');
+            if (successMessage) {
+                // Student-only interface - show success message
+                successMessage.classList.remove('hidden');
+                // Hide the form
+                successMessage.previousElementSibling.style.display = 'none';
+            } else {
+                // Modal interface - show alert and close
+                alert('✅ Attendance recorded successfully!');
+                closeStudentModal();
+            }
             
             // Refresh displays if functions exist (lecturer view)
             if (typeof updateActiveSessionsDisplay === 'function') {
@@ -662,5 +727,5 @@
         showClassRecords('all');
         updateActiveSessionsDisplay();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966ad07107297a9e',t:'MTc1Mzc3MzIxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966adc87d641e58c',t:'MTc1Mzc3MzcwNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
