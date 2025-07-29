@@ -535,12 +535,28 @@
         }
 
         function submitAttendance() {
-            const name = document.getElementById('studentName').value.trim();
-            const studentId = document.getElementById('studentId').value.trim();
-            const studentClass = document.getElementById('studentClass').value;
+            // Get form values - handle both modal and student-only interface
+            let name, studentId, studentClass;
+            
+            // Try to get values from student-only interface first
+            const studentNameField = document.getElementById('studentName');
+            const studentIdField = document.getElementById('studentId');
+            const studentClassField = document.getElementById('studentClass');
+            
+            if (studentNameField && studentIdField && studentClassField) {
+                name = studentNameField.value.trim();
+                studentId = studentIdField.value.trim();
+                studentClass = studentClassField.value;
+            } else {
+                alert('Form fields not found. Please refresh the page and try again.');
+                return;
+            }
+            
+            // Debug logging
+            console.log('Form values:', { name, studentId, studentClass });
             
             if (!name || !studentId || !studentClass) {
-                alert('Please fill in all fields');
+                alert('Please fill in all fields. Name: "' + name + '", ID: "' + studentId + '", Class: "' + studentClass + '"');
                 return;
             }
 
@@ -727,5 +743,5 @@
         showClassRecords('all');
         updateActiveSessionsDisplay();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966adc87d641e58c',t:'MTc1Mzc3MzcwNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966aedf1b2c0df6a',t:'MTc1Mzc3NDQyMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
