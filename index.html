@@ -191,20 +191,34 @@
         // Set today's date as default
         document.getElementById('sessionDate').valueAsDate = new Date();
 
-        // Check if page was opened with a session code from QR scan
+        // Check if page was opened with session data from QR scan
         window.addEventListener('load', function() {
             const urlParams = new URLSearchParams(window.location.search);
+            
+            // Check for direct session data in URL
+            const sessionData = urlParams.get('session');
+            if (sessionData) {
+                try {
+                    const session = JSON.parse(decodeURIComponent(sessionData));
+                    // Auto-open student modal and show check-in form
+                    openStudentModal();
+                    setTimeout(() => {
+                        showCheckInForm(session);
+                    }, 500);
+                    return;
+                } catch (error) {
+                    console.error('Error parsing session data:', error);
+                }
+            }
+            
+            // Fallback: check for session code
             const sessionCode = urlParams.get('code');
             if (sessionCode) {
-                // Auto-open student modal and process the code
                 openStudentModal();
                 setTimeout(() => {
                     processScannedCode(sessionCode);
                 }, 500);
             }
-            
-            // Load sessions from URL hash as backup
-            loadSessionsFromHash();
         });
 
         function generateQR() {
@@ -240,9 +254,9 @@
             // Also store in URL hash for sharing between devices
             storeSessionInHash(currentSession);
 
-            // Create QR code data with web link that includes session code
+            // Create QR code data with web link that includes complete session data
             const currentUrl = window.location.href.split('?')[0].split('#')[0]; // Get clean URL
-            const qrData = `${currentUrl}?code=${sessionCode}#session=${encodeURIComponent(JSON.stringify(currentSession))}`;
+            const qrData = `${currentUrl}?session=${encodeURIComponent(JSON.stringify(currentSession))}`;
 
             // Generate QR code using qrcode-generator library
             try {
@@ -437,6 +451,17 @@
             }
         }
 
+        function showCheckInForm(session) {
+            // Show check-in form directly with session data
+            document.getElementById('scannerSection').classList.add('hidden');
+            document.getElementById('checkinForm').classList.remove('hidden');
+            document.getElementById('sessionDetails').textContent = 
+                `Class: ${session.class} | ${session.date} at ${session.time}`;
+            
+            // Store current session for form submission
+            window.currentCheckInSession = session;
+        }
+
         function processScannedCode(code) {
             let session = activeSessions.find(s => s.code === code);
             
@@ -451,14 +476,7 @@
                 return;
             }
 
-            // Show check-in form
-            document.getElementById('scannerSection').classList.add('hidden');
-            document.getElementById('checkinForm').classList.remove('hidden');
-            document.getElementById('sessionDetails').textContent = 
-                `Class: ${session.class} | ${session.date} at ${session.time}`;
-            
-            // Store current session for form submission
-            window.currentCheckInSession = session;
+            showCheckInForm(session);
         }
 
         function submitAttendance() {
@@ -473,17 +491,24 @@
 
             const session = window.currentCheckInSession;
             
-            // Check if student already checked in
-            const existingAttendee = session.attendees.find(a => 
-                a.studentId === studentId || (a.name === name && a.class === studentClass)
-            );
+            if (!session) {
+                alert('Session data not found. Please scan the QR code again.');
+                return;
+            }
             
-            if (existingAttendee) {
+            // Load existing attendance records
+            let attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords')) || [];
+            
+            // Check if student already checked in across all records for this session
+            const existingRecord = attendanceRecords.find(r => r.sessionId === session.id);
+            if (existingRecord && existingRecord.attendees.find(a => 
+                a.studentId === studentId || (a.name === name && a.class === studentClass)
+            )) {
                 alert('You have already checked in for this session');
                 return;
             }
 
-            // Add attendee
+            // Create attendee record
             const attendee = {
                 name: name,
                 studentId: studentId,
@@ -492,21 +517,12 @@
                 timestamp: new Date().toISOString()
             };
 
-            session.attendees.push(attendee);
+            // Add to attendance records (this persists across devices)
+            let recordForClass = attendanceRecords.find(r => r.sessionId === session.id && r.class === studentClass);
             
-            // Update active sessions
-            const sessionIndex = activeSessions.findIndex(s => s.id === session.id);
-            if (sessionIndex !== -1) {
-                activeSessions[sessionIndex] = session;
-                localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
-            }
-
-            // Add to attendance records
-            let existingRecord = attendanceRecords.find(r => r.sessionId === session.id && r.class === studentClass);
-            
-            if (existingRecord) {
-                existingRecord.attendees.push(attendee);
-                existingRecord.totalPresent = existingRecord.attendees.length;
+            if (recordForClass) {
+                recordForClass.attendees.push(attendee);
+                recordForClass.totalPresent = recordForClass.attendees.length;
             } else {
                 const newRecord = {
                     sessionId: session.id,
@@ -520,12 +536,34 @@
                 attendanceRecords.push(newRecord);
             }
 
+            // Save to localStorage
             localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+
+            // Also update session attendees if session exists locally
+            if (session.attendees) {
+                session.attendees.push(attendee);
+            } else {
+                session.attendees = [attendee];
+            }
+
+            // Update active sessions if they exist locally
+            let activeSessions = JSON.parse(localStorage.getItem('activeSessions')) || [];
+            const sessionIndex = activeSessions.findIndex(s => s.id === session.id);
+            if (sessionIndex !== -1) {
+                activeSessions[sessionIndex] = session;
+                localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+            }
 
             alert('✅ Attendance recorded successfully!');
             closeStudentModal();
-            updateActiveSessionsDisplay();
-            showClassRecords('all');
+            
+            // Refresh displays if functions exist (lecturer view)
+            if (typeof updateActiveSessionsDisplay === 'function') {
+                updateActiveSessionsDisplay();
+            }
+            if (typeof showClassRecords === 'function') {
+                showClassRecords('all');
+            }
         }
 
         function exportRecords() {
@@ -624,5 +662,5 @@
         showClassRecords('all');
         updateActiveSessionsDisplay();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966ac77e06637a9e',t:'MTc1Mzc3Mjg0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966ad07107297a9e',t:'MTc1Mzc3MzIxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
