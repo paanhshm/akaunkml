@@ -535,50 +535,91 @@
         }
 
         function submitAttendance() {
-            // Direct form field access without setTimeout
-            const studentNameField = document.getElementById('studentName');
-            const studentIdField = document.getElementById('studentId');
-            const studentClassField = document.getElementById('studentClass');
+            console.log('=== ATTENDANCE SUBMISSION DEBUG ===');
             
-            console.log('DEBUG: Form fields found:', {
+            // Try multiple ways to get the form fields
+            let studentNameField = document.getElementById('studentName');
+            let studentIdField = document.getElementById('studentId');
+            let studentClassField = document.getElementById('studentClass');
+            
+            console.log('Method 1 - getElementById results:', {
+                nameField: studentNameField,
+                idField: studentIdField,
+                classField: studentClassField
+            });
+            
+            // If getElementById fails, try querySelector
+            if (!studentNameField) {
+                studentNameField = document.querySelector('#studentName');
+                console.log('Method 2 - querySelector for name:', studentNameField);
+            }
+            if (!studentIdField) {
+                studentIdField = document.querySelector('#studentId');
+                console.log('Method 2 - querySelector for ID:', studentIdField);
+            }
+            if (!studentClassField) {
+                studentClassField = document.querySelector('#studentClass');
+                console.log('Method 2 - querySelector for class:', studentClassField);
+            }
+            
+            // If still not found, try finding by placeholder or name
+            if (!studentNameField) {
+                studentNameField = document.querySelector('input[placeholder*="full name"]');
+                console.log('Method 3 - placeholder search for name:', studentNameField);
+            }
+            if (!studentIdField) {
+                studentIdField = document.querySelector('input[placeholder*="student ID"]');
+                console.log('Method 3 - placeholder search for ID:', studentIdField);
+            }
+            if (!studentClassField) {
+                studentClassField = document.querySelector('select');
+                console.log('Method 3 - generic select search:', studentClassField);
+            }
+            
+            console.log('Final field detection:', {
                 nameField: !!studentNameField,
-                idField: !!studentIdField, 
+                idField: !!studentIdField,
                 classField: !!studentClassField
             });
             
             if (!studentNameField || !studentIdField || !studentClassField) {
-                alert('ERROR: Form fields not found. Please refresh the page and try again.');
-                console.error('Missing form fields:', {
-                    studentName: studentNameField,
-                    studentId: studentIdField,
-                    studentClass: studentClassField
-                });
+                const errorMsg = `FORM ERROR: Missing fields - Name: ${!!studentNameField}, ID: ${!!studentIdField}, Class: ${!!studentClassField}`;
+                console.error(errorMsg);
+                alert(errorMsg + '\n\nPlease refresh the page and try again.');
                 return;
             }
             
-            const name = studentNameField.value.trim();
-            const studentId = studentIdField.value.trim();
-            const studentClass = studentClassField.value;
+            // Get values
+            const name = studentNameField.value ? studentNameField.value.trim() : '';
+            const studentId = studentIdField.value ? studentIdField.value.trim() : '';
+            const studentClass = studentClassField.value ? studentClassField.value.trim() : '';
             
-            console.log('DEBUG: Form values captured:', { 
-                name: `"${name}"`, 
-                studentId: `"${studentId}"`, 
-                studentClass: `"${studentClass}"` 
+            console.log('Values extracted:', {
+                name: `"${name}" (length: ${name.length})`,
+                studentId: `"${studentId}" (length: ${studentId.length})`,
+                studentClass: `"${studentClass}" (length: ${studentClass.length})`
             });
             
-            // Check each field individually for better error reporting
-            const missingFields = [];
-            if (!name) missingFields.push('Name');
-            if (!studentId) missingFields.push('Student ID');
-            if (!studentClass) missingFields.push('Class');
+            // Validate each field with detailed feedback
+            const errors = [];
+            if (!name || name.length === 0) {
+                errors.push('Name is empty');
+            }
+            if (!studentId || studentId.length === 0) {
+                errors.push('Student ID is empty');
+            }
+            if (!studentClass || studentClass.length === 0) {
+                errors.push('Class is not selected');
+            }
             
-            if (missingFields.length > 0) {
-                alert(`Please fill in the following fields: ${missingFields.join(', ')}`);
-                console.log('DEBUG: Missing fields:', missingFields);
+            if (errors.length > 0) {
+                const errorMsg = `VALIDATION ERROR:\n${errors.join('\n')}\n\nPlease fill in all fields completely.`;
+                console.error('Validation errors:', errors);
+                alert(errorMsg);
                 return;
             }
             
-            // All fields are filled, proceed with submission
+            console.log('All validations passed, proceeding with submission...');
             processAttendanceSubmission(name, studentId, studentClass);
         }
         
@@ -767,5 +808,5 @@
         showClassRecords('all');
         updateActiveSessionsDisplay();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966b00a4f077553c',t:'MTc1Mzc3NTE4Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966b0e194449e58a',t:'MTc1Mzc3NTczOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
