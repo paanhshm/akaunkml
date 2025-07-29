@@ -535,40 +535,51 @@
         }
 
         function submitAttendance() {
-            // Get form values - handle both modal and student-only interface
-            let name, studentId, studentClass;
+            // Direct form field access without setTimeout
+            const studentNameField = document.getElementById('studentName');
+            const studentIdField = document.getElementById('studentId');
+            const studentClassField = document.getElementById('studentClass');
             
-            // Wait a moment for DOM to be ready, then try to get values
-            setTimeout(() => {
-                const studentNameField = document.getElementById('studentName');
-                const studentIdField = document.getElementById('studentId');
-                const studentClassField = document.getElementById('studentClass');
-                
-                console.log('Found fields:', {
-                    nameField: !!studentNameField,
-                    idField: !!studentIdField, 
-                    classField: !!studentClassField
+            console.log('DEBUG: Form fields found:', {
+                nameField: !!studentNameField,
+                idField: !!studentIdField, 
+                classField: !!studentClassField
+            });
+            
+            if (!studentNameField || !studentIdField || !studentClassField) {
+                alert('ERROR: Form fields not found. Please refresh the page and try again.');
+                console.error('Missing form fields:', {
+                    studentName: studentNameField,
+                    studentId: studentIdField,
+                    studentClass: studentClassField
                 });
-                
-                if (studentNameField && studentIdField && studentClassField) {
-                    name = studentNameField.value.trim();
-                    studentId = studentIdField.value.trim();
-                    studentClass = studentClassField.value;
-                    
-                    console.log('Form values:', { name, studentId, studentClass });
-                    
-                    if (!name || !studentId || !studentClass) {
-                        alert('Please fill in all fields. Name: "' + name + '", ID: "' + studentId + '", Class: "' + studentClass + '"');
-                        return;
-                    }
-                    
-                    // Continue with submission
-                    processAttendanceSubmission(name, studentId, studentClass);
-                } else {
-                    alert('Form fields not found. Please refresh the page and try again.');
-                    return;
-                }
-            }, 100);
+                return;
+            }
+            
+            const name = studentNameField.value.trim();
+            const studentId = studentIdField.value.trim();
+            const studentClass = studentClassField.value;
+            
+            console.log('DEBUG: Form values captured:', { 
+                name: `"${name}"`, 
+                studentId: `"${studentId}"`, 
+                studentClass: `"${studentClass}"` 
+            });
+            
+            // Check each field individually for better error reporting
+            const missingFields = [];
+            if (!name) missingFields.push('Name');
+            if (!studentId) missingFields.push('Student ID');
+            if (!studentClass) missingFields.push('Class');
+            
+            if (missingFields.length > 0) {
+                alert(`Please fill in the following fields: ${missingFields.join(', ')}`);
+                console.log('DEBUG: Missing fields:', missingFields);
+                return;
+            }
+            
+            // All fields are filled, proceed with submission
+            processAttendanceSubmission(name, studentId, studentClass);
         }
         
         function processAttendanceSubmission(name, studentId, studentClass) {
@@ -756,5 +767,5 @@
         showClassRecords('all');
         updateActiveSessionsDisplay();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966af820975d553c',t:'MTc1Mzc3NDgzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966b00a4f077553c',t:'MTc1Mzc3NTE4Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
