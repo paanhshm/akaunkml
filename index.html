@@ -58,6 +58,14 @@
                     <button onclick="submitAttendance()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg">
                         Check In
                     </button>
+                    
+                    <!-- Debug Panel -->
+                    <div id="debugPanel" class="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                        <h4 class="font-bold text-gray-700 mb-2">🔍 Debug Info:</h4>
+                        <div id="debugOutput" class="text-gray-600 space-y-1">
+                            <div>Ready to debug form submission...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -534,57 +542,59 @@
             showCheckInForm(session);
         }
 
+        function addDebugMessage(message) {
+            const debugOutput = document.getElementById('debugOutput');
+            if (debugOutput) {
+                const div = document.createElement('div');
+                div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+                debugOutput.appendChild(div);
+                debugOutput.scrollTop = debugOutput.scrollHeight;
+            }
+        }
+
         function submitAttendance() {
-            console.log('=== ATTENDANCE SUBMISSION DEBUG ===');
+            addDebugMessage('=== STARTING FORM SUBMISSION ===');
             
             // Try multiple ways to get the form fields
             let studentNameField = document.getElementById('studentName');
             let studentIdField = document.getElementById('studentId');
             let studentClassField = document.getElementById('studentClass');
             
-            console.log('Method 1 - getElementById results:', {
-                nameField: studentNameField,
-                idField: studentIdField,
-                classField: studentClassField
-            });
+            addDebugMessage(`Method 1 - getElementById: Name=${!!studentNameField}, ID=${!!studentIdField}, Class=${!!studentClassField}`);
             
             // If getElementById fails, try querySelector
             if (!studentNameField) {
                 studentNameField = document.querySelector('#studentName');
-                console.log('Method 2 - querySelector for name:', studentNameField);
+                addDebugMessage(`Method 2 - querySelector for name: ${!!studentNameField}`);
             }
             if (!studentIdField) {
                 studentIdField = document.querySelector('#studentId');
-                console.log('Method 2 - querySelector for ID:', studentIdField);
+                addDebugMessage(`Method 2 - querySelector for ID: ${!!studentIdField}`);
             }
             if (!studentClassField) {
                 studentClassField = document.querySelector('#studentClass');
-                console.log('Method 2 - querySelector for class:', studentClassField);
+                addDebugMessage(`Method 2 - querySelector for class: ${!!studentClassField}`);
             }
             
             // If still not found, try finding by placeholder or name
             if (!studentNameField) {
                 studentNameField = document.querySelector('input[placeholder*="full name"]');
-                console.log('Method 3 - placeholder search for name:', studentNameField);
+                addDebugMessage(`Method 3 - placeholder search for name: ${!!studentNameField}`);
             }
             if (!studentIdField) {
                 studentIdField = document.querySelector('input[placeholder*="student ID"]');
-                console.log('Method 3 - placeholder search for ID:', studentIdField);
+                addDebugMessage(`Method 3 - placeholder search for ID: ${!!studentIdField}`);
             }
             if (!studentClassField) {
                 studentClassField = document.querySelector('select');
-                console.log('Method 3 - generic select search:', studentClassField);
+                addDebugMessage(`Method 3 - generic select search: ${!!studentClassField}`);
             }
             
-            console.log('Final field detection:', {
-                nameField: !!studentNameField,
-                idField: !!studentIdField,
-                classField: !!studentClassField
-            });
+            addDebugMessage(`Final detection: Name=${!!studentNameField}, ID=${!!studentIdField}, Class=${!!studentClassField}`);
             
             if (!studentNameField || !studentIdField || !studentClassField) {
                 const errorMsg = `FORM ERROR: Missing fields - Name: ${!!studentNameField}, ID: ${!!studentIdField}, Class: ${!!studentClassField}`;
-                console.error(errorMsg);
+                addDebugMessage(errorMsg);
                 alert(errorMsg + '\n\nPlease refresh the page and try again.');
                 return;
             }
@@ -594,11 +604,7 @@
             const studentId = studentIdField.value ? studentIdField.value.trim() : '';
             const studentClass = studentClassField.value ? studentClassField.value.trim() : '';
             
-            console.log('Values extracted:', {
-                name: `"${name}" (length: ${name.length})`,
-                studentId: `"${studentId}" (length: ${studentId.length})`,
-                studentClass: `"${studentClass}" (length: ${studentClass.length})`
-            });
+            addDebugMessage(`Values: Name="${name}" (${name.length}), ID="${studentId}" (${studentId.length}), Class="${studentClass}" (${studentClass.length})`);
             
             // Validate each field with detailed feedback
             const errors = [];
@@ -613,13 +619,13 @@
             }
             
             if (errors.length > 0) {
-                const errorMsg = `VALIDATION ERROR:\n${errors.join('\n')}\n\nPlease fill in all fields completely.`;
-                console.error('Validation errors:', errors);
-                alert(errorMsg);
+                const errorMsg = `VALIDATION ERROR: ${errors.join(', ')}`;
+                addDebugMessage(errorMsg);
+                alert(errorMsg + '\n\nPlease fill in all fields completely.');
                 return;
             }
             
-            console.log('All validations passed, proceeding with submission...');
+            addDebugMessage('✅ All validations passed! Submitting...');
             processAttendanceSubmission(name, studentId, studentClass);
         }
         
@@ -808,5 +814,5 @@
         showClassRecords('all');
         updateActiveSessionsDisplay();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966b0e194449e58a',t:'MTc1Mzc3NTczOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966b18fcd39e97ba',t:'MTc1Mzc3NjE4NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
