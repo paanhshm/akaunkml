@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecturer Attendance System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Student Check-in Modal -->
+    <div id="studentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Student Check-in</h3>
+                <button onclick="closeStudentModal()" class="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            
+            <div id="scannerSection">
+                <p class="text-gray-600 mb-4">Scan the QR code displayed by your lecturer</p>
+                <div id="qr-reader" class="mb-4"></div>
+                <button onclick="startScanner()" id="startScanBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg mb-2">
+                    Start Camera Scanner
+                </button>
+                <div class="text-center text-gray-500 text-sm">OR</div>
+                <input type="text" id="manualCode" placeholder="Enter session code manually" class="w-full p-2 border rounded-lg mt-2 mb-2">
+                <button onclick="processManualCode()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg">
+                    Submit Code
+                </button>
+            </div>
+            
+            <div id="checkinForm" class="hidden">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <p class="text-green-800 font-medium">Session Found!</p>
+                    <p id="sessionDetails" class="text-green-700 text-sm"></p>
+                </div>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                        <input type="text" id="studentName" class="w-full p-2 border rounded-lg" placeholder="Enter your full name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+                        <input type="text" id="studentId" class="w-full p-2 border rounded-lg" placeholder="Enter your student ID">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Select Your Class</label>
+                        <select id="studentClass" class="w-full p-2 border rounded-lg">
+                            <option value="">Choose your class...</option>
+                            <option value="A05">A05</option>
+                            <option value="A06">A06</option>
+                            <option value="A07">A07</option>
+                            <option value="A08">A08</option>
+                        </select>
+                    </div>
+                    <button onclick="submitAttendance()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg">
+                        Check In
+                    </button>
+                    
+                    <!-- Debug Panel -->
+                    <div id="debugPanel" class="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                        <h4 class="font-bold text-gray-700 mb-2">🔍 Debug Info:</h4>
+                        <div id="debugOutput" class="text-gray-600 space-y-1">
+                            <div>Ready to debug form submission...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">📚 Attendance Management System</h1>
+                    <p class="text-gray-600">Manage attendance for 4 classes • Total: 100 students</p>
+                </div>
+                <button onclick="openStudentModal()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold">
+                    📱 Student Check-in
+                </button>
+            </div>
+        </div>
+
+        <!-- Class Selection and QR Generation -->
+        <div class="grid md:grid-cols-2 gap-8 mb-8">
+            <!-- QR Code Generator -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">🔗 Generate QR Code</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Class</label>
+                        <select id="classSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Choose a class...</option>
+                            <option value="ALL">All Classes (100 students)</option>
+                            <option value="A05">A05 (25 students)</option>
+                            <option value="A06">A06 (25 students)</option>
+                            <option value="A07">A07 (25 students)</option>
+                            <option value="A08">A08 (25 students)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Session Date</label>
+                        <input type="date" id="sessionDate" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Session Time</label>
+                        <input type="time" id="sessionTime" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <button onclick="generateQR()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                        Generate QR Code
+                    </button>
+                </div>
+            </div>
+
+            <!-- QR Code Display -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">📱 QR Code for Students</h2>
+                
+                <div id="qrContainer" class="text-center">
+                    <div class="bg-gray-100 rounded-lg p-8 mb-4">
+                        <p class="text-gray-500">Select class and generate QR code</p>
+                    </div>
+                </div>
+                
+                <div id="sessionInfo" class="hidden bg-blue-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-blue-800 mb-2">Session Details:</h3>
+                    <p id="sessionDetailsDisplay" class="text-blue-700"></p>
+                    <p class="text-blue-600 text-sm mt-2">Students scan this QR code to access check-in form directly</p>
+                    <p class="text-blue-500 text-xs mt-1">📱 QR code opens website automatically • Session code: <span id="sessionCode" class="font-mono font-bold"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Sessions -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">🟢 Active Sessions</h2>
+            <div id="activeSessionsContainer">
+                <p class="text-gray-500 text-center py-4">No active sessions</p>
+            </div>
+        </div>
+
+        <!-- Attendance Records -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-800">📊 Attendance Records</h2>
+                <div class="space-x-2">
+                    <button onclick="exportRecords()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
+                        Export CSV
+                    </button>
+                    <button onclick="clearAllRecords()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
+                        Clear All Records
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Class Tabs -->
+            <div class="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+                <button onclick="showClassRecords('A05')" class="class-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition duration-200" data-class="A05">
+                    A05
+                </button>
+                <button onclick="showClassRecords('A06')" class="class-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition duration-200" data-class="A06">
+                    A06
+                </button>
+                <button onclick="showClassRecords('A07')" class="class-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition duration-200" data-class="A07">
+                    A07
+                </button>
+                <button onclick="showClassRecords('A08')" class="class-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition duration-200" data-class="A08">
+                    A08
+                </button>
+                <button onclick="showClassRecords('all')" class="class-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition duration-200" data-class="all">
+                    All Classes
+                </button>
+            </div>
+            
+            <!-- Records Display -->
+            <div id="recordsContainer">
+                <div class="text-center text-gray-500 py-8">
+                    <p>No attendance records yet. Generate a QR code to start tracking attendance.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize data
+        let attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords')) || [];
+        let activeSessions = JSON.parse(localStorage.getItem('activeSessions')) || [];
+        let currentSession = null;
+        let html5QrCode = null;
+
+        // Set today's date as default
+        document.getElementById('sessionDate').valueAsDate = new Date();
+
+        // Check if page was opened with session data from QR scan
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Check for direct session data in URL
+            const sessionData = urlParams.get('session');
+            if (sessionData) {
+                try {
+                    const session = JSON.parse(decodeURIComponent(sessionData));
+                    // Show student-only interface
+                    showStudentOnlyInterface(session);
+                    return;
+                } catch (error) {
+                    console.error('Error parsing session data:', error);
+                }
+            }
+            
+            // Fallback: check for session code
+            const sessionCode = urlParams.get('code');
+            if (sessionCode) {
+                openStudentModal();
+                setTimeout(() => {
+                    processScannedCode(sessionCode);
+                }, 500);
+            }
+        });
+
+        function generateQR() {
+            const classCode = document.getElementById('classSelect').value;
+            const sessionDate = document.getElementById('sessionDate').value;
+            const sessionTime = document.getElementById('sessionTime').value;
+
+            if (!classCode || !sessionDate || !sessionTime) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Create session ID
+            const sessionId = `${classCode}_${sessionDate}_${sessionTime}`;
+            const sessionCode = generateSessionCode();
+            
+            currentSession = {
+                id: sessionId,
+                code: sessionCode,
+                class: classCode,
+                date: sessionDate,
+                time: sessionTime,
+                attendees: [],
+                active: true,
+                created: new Date().toISOString()
+            };
+
+            // Add to active sessions
+            activeSessions = activeSessions.filter(s => s.id !== sessionId); // Remove if exists
+            activeSessions.push(currentSession);
+            localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+            
+            // Also store in URL hash for sharing between devices
+            storeSessionInHash(currentSession);
+
+            // Create QR code data with web link that includes complete session data
+            const currentUrl = window.location.href.split('?')[0].split('#')[0]; // Get clean URL
+            const qrData = `${currentUrl}?session=${encodeURIComponent(JSON.stringify(currentSession))}`;
+
+            // Generate QR code using qrcode-generator library
+            try {
+                const qr = qrcode(0, 'M');
+                qr.addData(qrData);
+                qr.make();
+                
+                // Create QR code as SVG
+                const qrSvg = qr.createSvgTag(4, 4);
+                
+                // Display QR code
+                const qrContainer = document.getElementById('qrContainer');
+                qrContainer.innerHTML = `
+                    <div class="bg-white p-4 rounded-lg border-2 border-gray-200 inline-block">
+                        ${qrSvg}
+                    </div>
+                `;
+
+                // Add download button
+                const downloadBtn = document.createElement('button');
+                downloadBtn.textContent = 'Download QR Code';
+                downloadBtn.className = 'mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200';
+                downloadBtn.onclick = () => downloadQRSvg(qrSvg, sessionId);
+                qrContainer.appendChild(downloadBtn);
+
+                // Show session info
+                document.getElementById('sessionInfo').classList.remove('hidden');
+                document.getElementById('sessionDetailsDisplay').textContent = 
+                    `Class: ${classCode} | Date: ${sessionDate} | Time: ${sessionTime}`;
+                document.getElementById('sessionCode').textContent = sessionCode;
+
+                updateActiveSessionsDisplay();
+            } catch (error) {
+                console.error('QR Code generation error:', error);
+                alert('Error generating QR code. Please try again.');
+            }
+        }
+
+        function generateSessionCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function downloadQRSvg(svgString, sessionId) {
+            const blob = new Blob([svgString], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = `QR_${sessionId}.svg`;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function updateActiveSessionsDisplay() {
+            const container = document.getElementById('activeSessionsContainer');
+            
+            if (activeSessions.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No active sessions</p>';
+                return;
+            }
+
+            container.innerHTML = activeSessions.map(session => `
+                <div class="border border-green-200 bg-green-50 rounded-lg p-4 mb-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-semibold text-green-800">Class ${session.class}</h3>
+                            <p class="text-green-700 text-sm">${session.date} at ${session.time}</p>
+                            <p class="text-green-600 text-sm">Code: <span class="font-mono font-bold">${session.code}</span></p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-green-600">${session.attendees.length} checked in</div>
+                            <button onclick="endSession('${session.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm mt-1">
+                                End Session
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function endSession(sessionId) {
+            if (confirm('Are you sure you want to end this session?')) {
+                activeSessions = activeSessions.filter(s => s.id !== sessionId);
+                localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+                updateActiveSessionsDisplay();
+            }
+        }
+
+        // Student Modal Functions
+        function openStudentModal() {
+            document.getElementById('studentModal').classList.remove('hidden');
+        }
+
+        function closeStudentModal() {
+            document.getElementById('studentModal').classList.add('hidden');
+            if (html5QrCode) {
+                html5QrCode.stop();
+            }
+            resetStudentModal();
+        }
+
+        function resetStudentModal() {
+            document.getElementById('scannerSection').classList.remove('hidden');
+            document.getElementById('checkinForm').classList.add('hidden');
+            document.getElementById('manualCode').value = '';
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentId').value = '';
+            document.getElementById('studentClass').value = '';
+        }
+
+        function startScanner() {
+            const qrReader = document.getElementById('qr-reader');
+            
+            if (html5QrCode) {
+                html5QrCode.stop();
+            }
+
+            html5QrCode = new Html5Qrcode("qr-reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                (decodedText, decodedResult) => {
+                    processScannedCode(decodedText);
+                    html5QrCode.stop();
+                },
+                (errorMessage) => {
+                    // Handle scan errors silently
+                }
+            ).catch(err => {
+                alert('Unable to start camera. Please enter the session code manually.');
+            });
+        }
+
+        function processManualCode() {
+            const code = document.getElementById('manualCode').value.trim().toUpperCase();
+            if (code) {
+                processScannedCode(code);
+            } else {
+                alert('Please enter a session code');
+            }
+        }
+
+        function storeSessionInHash(session) {
+            // Store session data in URL hash for cross-device sharing
+            const hashData = {
+                sessions: [session],
+                timestamp: Date.now()
+            };
+            window.location.hash = `data=${encodeURIComponent(JSON.stringify(hashData))}`;
+        }
+
+        function loadSessionsFromHash() {
+            try {
+                // Check URL hash for session data
+                const hash = window.location.hash;
+                if (hash.includes('session=')) {
+                    const sessionData = hash.split('session=')[1];
+                    const session = JSON.parse(decodeURIComponent(sessionData));
+                    
+                    // Add session to active sessions if not already present
+                    const existingSession = activeSessions.find(s => s.code === session.code);
+                    if (!existingSession) {
+                        activeSessions.push(session);
+                        localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+                        updateActiveSessionsDisplay();
+                    }
+                }
+                
+                // Also check for data hash
+                if (hash.includes('data=')) {
+                    const dataStr = hash.split('data=')[1];
+                    const hashData = JSON.parse(decodeURIComponent(dataStr));
+                    
+                    // Add sessions from hash if they're recent (within 24 hours)
+                    const dayAgo = Date.now() - (24 * 60 * 60 * 1000);
+                    if (hashData.timestamp > dayAgo) {
+                        hashData.sessions.forEach(session => {
+                            const existingSession = activeSessions.find(s => s.code === session.code);
+                            if (!existingSession) {
+                                activeSessions.push(session);
+                            }
+                        });
+                        localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+                        updateActiveSessionsDisplay();
+                    }
+                }
+            } catch (error) {
+                console.log('No valid session data in URL');
+            }
+        }
+
+        function showStudentOnlyInterface(session) {
+            // Hide all lecturer interface elements
+            document.querySelector('.container').innerHTML = `
+                <div class="max-w-md mx-auto">
+                    <!-- Student Check-in Header -->
+                    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                        <div class="text-center">
+                            <h1 class="text-2xl font-bold text-gray-800 mb-2">📚 Student Check-in</h1>
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <p class="text-green-800 font-medium">Session Found!</p>
+                                <p class="text-green-700 text-sm">Class: ${session.class} | ${session.date} at ${session.time}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Check-in Form -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                                <input type="text" id="studentName" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your full name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
+                                <input type="text" id="studentId" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your student ID">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Select Your Class</label>
+                                <select id="studentClass" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Choose your class...</option>
+                                    <option value="A05">A05</option>
+                                    <option value="A06">A06</option>
+                                    <option value="A07">A07</option>
+                                    <option value="A08">A08</option>
+                                </select>
+                            </div>
+                            <button onclick="submitAttendance()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                                ✅ Check In
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Success Message (hidden initially) -->
+                    <div id="successMessage" class="hidden bg-green-50 border border-green-200 rounded-lg p-6 mt-6">
+                        <div class="text-center">
+                            <div class="text-green-600 text-4xl mb-2">✅</div>
+                            <h2 class="text-xl font-bold text-green-800 mb-2">Check-in Successful!</h2>
+                            <p class="text-green-700">Your attendance has been recorded.</p>
+                            <p class="text-green-600 text-sm mt-2">You can now close this page.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Store current session for form submission
+            window.currentCheckInSession = session;
+        }
+
+        function showCheckInForm(session) {
+            // Show check-in form directly with session data
+            document.getElementById('scannerSection').classList.add('hidden');
+            document.getElementById('checkinForm').classList.remove('hidden');
+            document.getElementById('sessionDetails').textContent = 
+                `Class: ${session.class} | ${session.date} at ${session.time}`;
+            
+            // Store current session for form submission
+            window.currentCheckInSession = session;
+        }
+
+        function processScannedCode(code) {
+            let session = activeSessions.find(s => s.code === code);
+            
+            // If session not found locally, try to load from URL hash
+            if (!session) {
+                loadSessionsFromHash();
+                session = activeSessions.find(s => s.code === code);
+            }
+            
+            if (!session) {
+                alert('Invalid session code or session has ended. Please make sure you scanned the latest QR code.');
+                return;
+            }
+
+            showCheckInForm(session);
+        }
+
+        function addDebugMessage(message) {
+            const debugOutput = document.getElementById('debugOutput');
+            if (debugOutput) {
+                const div = document.createElement('div');
+                div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+                debugOutput.appendChild(div);
+                debugOutput.scrollTop = debugOutput.scrollHeight;
+            }
+        }
+
+        function submitAttendance() {
+            addDebugMessage('=== STARTING FORM SUBMISSION ===');
+            
+            // Try multiple ways to get the form fields
+            let studentNameField = document.getElementById('studentName');
+            let studentIdField = document.getElementById('studentId');
+            let studentClassField = document.getElementById('studentClass');
+            
+            addDebugMessage(`Method 1 - getElementById: Name=${!!studentNameField}, ID=${!!studentIdField}, Class=${!!studentClassField}`);
+            
+            // If getElementById fails, try querySelector
+            if (!studentNameField) {
+                studentNameField = document.querySelector('#studentName');
+                addDebugMessage(`Method 2 - querySelector for name: ${!!studentNameField}`);
+            }
+            if (!studentIdField) {
+                studentIdField = document.querySelector('#studentId');
+                addDebugMessage(`Method 2 - querySelector for ID: ${!!studentIdField}`);
+            }
+            if (!studentClassField) {
+                studentClassField = document.querySelector('#studentClass');
+                addDebugMessage(`Method 2 - querySelector for class: ${!!studentClassField}`);
+            }
+            
+            // If still not found, try finding by placeholder or name
+            if (!studentNameField) {
+                studentNameField = document.querySelector('input[placeholder*="full name"]');
+                addDebugMessage(`Method 3 - placeholder search for name: ${!!studentNameField}`);
+            }
+            if (!studentIdField) {
+                studentIdField = document.querySelector('input[placeholder*="student ID"]');
+                addDebugMessage(`Method 3 - placeholder search for ID: ${!!studentIdField}`);
+            }
+            if (!studentClassField) {
+                studentClassField = document.querySelector('select');
+                addDebugMessage(`Method 3 - generic select search: ${!!studentClassField}`);
+            }
+            
+            addDebugMessage(`Final detection: Name=${!!studentNameField}, ID=${!!studentIdField}, Class=${!!studentClassField}`);
+            
+            if (!studentNameField || !studentIdField || !studentClassField) {
+                const errorMsg = `FORM ERROR: Missing fields - Name: ${!!studentNameField}, ID: ${!!studentIdField}, Class: ${!!studentClassField}`;
+                addDebugMessage(errorMsg);
+                alert(errorMsg + '\n\nPlease refresh the page and try again.');
+                return;
+            }
+            
+            // Get values
+            const name = studentNameField.value ? studentNameField.value.trim() : '';
+            const studentId = studentIdField.value ? studentIdField.value.trim() : '';
+            const studentClass = studentClassField.value ? studentClassField.value.trim() : '';
+            
+            addDebugMessage(`Values: Name="${name}" (${name.length}), ID="${studentId}" (${studentId.length}), Class="${studentClass}" (${studentClass.length})`);
+            
+            // Validate each field with detailed feedback
+            const errors = [];
+            if (!name || name.length === 0) {
+                errors.push('Name is empty');
+            }
+            if (!studentId || studentId.length === 0) {
+                errors.push('Student ID is empty');
+            }
+            if (!studentClass || studentClass.length === 0) {
+                errors.push('Class is not selected');
+            }
+            
+            if (errors.length > 0) {
+                const errorMsg = `VALIDATION ERROR: ${errors.join(', ')}`;
+                addDebugMessage(errorMsg);
+                alert(errorMsg + '\n\nPlease fill in all fields completely.');
+                return;
+            }
+            
+            addDebugMessage('✅ All validations passed! Submitting...');
+            processAttendanceSubmission(name, studentId, studentClass);
+        }
+        
+        function processAttendanceSubmission(name, studentId, studentClass) {
+
+            const session = window.currentCheckInSession;
+            
+            if (!session) {
+                alert('Session data not found. Please scan the QR code again.');
+                return;
+            }
+            
+            // Load existing attendance records
+            let attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords')) || [];
+            
+            // Check if student already checked in across all records for this session
+            const existingRecord = attendanceRecords.find(r => r.sessionId === session.id);
+            if (existingRecord && existingRecord.attendees.find(a => 
+                a.studentId === studentId || (a.name === name && a.class === studentClass)
+            )) {
+                alert('You have already checked in for this session');
+                return;
+            }
+
+            // Create attendee record
+            const attendee = {
+                name: name,
+                studentId: studentId,
+                class: studentClass,
+                scanTime: new Date().toLocaleTimeString(),
+                timestamp: new Date().toISOString()
+            };
+
+            // Add to attendance records (this persists across devices)
+            let recordForClass = attendanceRecords.find(r => r.sessionId === session.id && r.class === studentClass);
+            
+            if (recordForClass) {
+                recordForClass.attendees.push(attendee);
+                recordForClass.totalPresent = recordForClass.attendees.length;
+            } else {
+                const newRecord = {
+                    sessionId: session.id,
+                    class: studentClass,
+                    date: session.date,
+                    time: session.time,
+                    attendees: [attendee],
+                    totalPresent: 1,
+                    totalStudents: 25
+                };
+                attendanceRecords.push(newRecord);
+            }
+
+            // Save to localStorage
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+
+            // Also update session attendees if session exists locally
+            if (session.attendees) {
+                session.attendees.push(attendee);
+            } else {
+                session.attendees = [attendee];
+            }
+
+            // Update active sessions if they exist locally
+            let activeSessions = JSON.parse(localStorage.getItem('activeSessions')) || [];
+            const sessionIndex = activeSessions.findIndex(s => s.id === session.id);
+            if (sessionIndex !== -1) {
+                activeSessions[sessionIndex] = session;
+                localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+            }
+
+            // Check if we're in student-only mode or modal mode
+            const successMessage = document.getElementById('successMessage');
+            if (successMessage) {
+                // Student-only interface - show success message
+                successMessage.classList.remove('hidden');
+                // Hide the form
+                successMessage.previousElementSibling.style.display = 'none';
+            } else {
+                // Modal interface - show alert and close
+                alert('✅ Attendance recorded successfully!');
+                closeStudentModal();
+            }
+            
+            // Refresh displays if functions exist (lecturer view)
+            if (typeof updateActiveSessionsDisplay === 'function') {
+                updateActiveSessionsDisplay();
+            }
+            if (typeof showClassRecords === 'function') {
+                showClassRecords('all');
+            }
+        }
+
+        function exportRecords() {
+            if (attendanceRecords.length === 0) {
+                alert('No records to export');
+                return;
+            }
+
+            let csv = 'Class,Date,Time,Student Name,Student ID,Check-in Time\n';
+            
+            attendanceRecords.forEach(record => {
+                record.attendees.forEach(student => {
+                    csv += `${record.class},${record.date},${record.time},${student.name},${student.studentId},${student.scanTime}\n`;
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_records_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function showClassRecords(classFilter) {
+            // Update tab appearance
+            document.querySelectorAll('.class-tab').forEach(tab => {
+                if (tab.dataset.class === classFilter) {
+                    tab.className = 'class-tab flex-1 py-2 px-4 rounded-md text-sm font-medium bg-blue-600 text-white';
+                } else {
+                    tab.className = 'class-tab flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-600 hover:text-gray-800';
+                }
+            });
+
+            const container = document.getElementById('recordsContainer');
+            
+            let filteredRecords = attendanceRecords;
+            if (classFilter !== 'all') {
+                filteredRecords = attendanceRecords.filter(record => record.class === classFilter);
+            }
+
+            if (filteredRecords.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <p>No attendance records for ${classFilter === 'all' ? 'any class' : 'class ' + classFilter} yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort by date and time (newest first)
+            filteredRecords.sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+
+            container.innerHTML = filteredRecords.map(record => `
+                <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">Class ${record.class}</h3>
+                            <p class="text-sm text-gray-600">${record.date} at ${record.time}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-green-600">${record.totalPresent}/${record.totalStudents}</div>
+                            <div class="text-sm text-gray-500">${Math.round((record.totalPresent/record.totalStudents)*100)}% present</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded p-3">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Present Students:</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            ${record.attendees.map(student => `
+                                <div class="flex justify-between items-center bg-white p-2 rounded">
+                                    <div>
+                                        <span class="font-medium">${student.name}</span>
+                                        <span class="text-gray-500 text-xs block">${student.studentId}</span>
+                                    </div>
+                                    <span class="text-gray-500 text-xs">${student.scanTime}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearAllRecords() {
+            if (confirm('Are you sure you want to clear all attendance records? This action cannot be undone.')) {
+                attendanceRecords = [];
+                localStorage.removeItem('attendanceRecords');
+                showClassRecords('all');
+                alert('All records cleared successfully');
+            }
+        }
+
+        // Initialize display
+        showClassRecords('all');
+        updateActiveSessionsDisplay();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966b18fcd39e97ba',t:'MTc1Mzc3NjE4NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
