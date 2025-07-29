@@ -202,6 +202,9 @@
                     processScannedCode(sessionCode);
                 }, 500);
             }
+            
+            // Load sessions from URL hash as backup
+            loadSessionsFromHash();
         });
 
         function generateQR() {
@@ -233,10 +236,13 @@
             activeSessions = activeSessions.filter(s => s.id !== sessionId); // Remove if exists
             activeSessions.push(currentSession);
             localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+            
+            // Also store in URL hash for sharing between devices
+            storeSessionInHash(currentSession);
 
             // Create QR code data with web link that includes session code
-            const currentUrl = window.location.href.split('?')[0]; // Get current page URL without parameters
-            const qrData = `${currentUrl}?code=${sessionCode}`;
+            const currentUrl = window.location.href.split('?')[0].split('#')[0]; // Get clean URL
+            const qrData = `${currentUrl}?code=${sessionCode}#session=${encodeURIComponent(JSON.stringify(currentSession))}`;
 
             // Generate QR code using qrcode-generator library
             try {
@@ -382,11 +388,66 @@
             }
         }
 
+        function storeSessionInHash(session) {
+            // Store session data in URL hash for cross-device sharing
+            const hashData = {
+                sessions: [session],
+                timestamp: Date.now()
+            };
+            window.location.hash = `data=${encodeURIComponent(JSON.stringify(hashData))}`;
+        }
+
+        function loadSessionsFromHash() {
+            try {
+                // Check URL hash for session data
+                const hash = window.location.hash;
+                if (hash.includes('session=')) {
+                    const sessionData = hash.split('session=')[1];
+                    const session = JSON.parse(decodeURIComponent(sessionData));
+                    
+                    // Add session to active sessions if not already present
+                    const existingSession = activeSessions.find(s => s.code === session.code);
+                    if (!existingSession) {
+                        activeSessions.push(session);
+                        localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+                        updateActiveSessionsDisplay();
+                    }
+                }
+                
+                // Also check for data hash
+                if (hash.includes('data=')) {
+                    const dataStr = hash.split('data=')[1];
+                    const hashData = JSON.parse(decodeURIComponent(dataStr));
+                    
+                    // Add sessions from hash if they're recent (within 24 hours)
+                    const dayAgo = Date.now() - (24 * 60 * 60 * 1000);
+                    if (hashData.timestamp > dayAgo) {
+                        hashData.sessions.forEach(session => {
+                            const existingSession = activeSessions.find(s => s.code === session.code);
+                            if (!existingSession) {
+                                activeSessions.push(session);
+                            }
+                        });
+                        localStorage.setItem('activeSessions', JSON.stringify(activeSessions));
+                        updateActiveSessionsDisplay();
+                    }
+                }
+            } catch (error) {
+                console.log('No valid session data in URL');
+            }
+        }
+
         function processScannedCode(code) {
-            const session = activeSessions.find(s => s.code === code);
+            let session = activeSessions.find(s => s.code === code);
+            
+            // If session not found locally, try to load from URL hash
+            if (!session) {
+                loadSessionsFromHash();
+                session = activeSessions.find(s => s.code === code);
+            }
             
             if (!session) {
-                alert('Invalid session code or session has ended');
+                alert('Invalid session code or session has ended. Please make sure you scanned the latest QR code.');
                 return;
             }
 
@@ -563,5 +624,5 @@
         showClassRecords('all');
         updateActiveSessionsDisplay();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966ab432a435dd17',t:'MTc1Mzc3MjA1NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966ac77e06637a9e',t:'MTc1Mzc3Mjg0Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
